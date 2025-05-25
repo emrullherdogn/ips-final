@@ -8,7 +8,7 @@ Bu proje, **XDP (eXpress Data Path)** teknolojisini kullanarak ağ trafiğini ge
 
 Projenin derlenip çalıştırılabilmesi için aşağıdaki paketlerin sisteminizde kurulu olması gerekir:
 
-### 🔧 Gerekli Paketlerin Kurulumu
+### 🔧 Gerekli Paketlerin Kurulumu (Tek Satırda)
 
 ```bash
 sudo apt update -y && sudo apt install -y clang llvm gcc gcc-multilib bpftool linux-headers-$(uname -r) pkg-config make git libelf-dev
@@ -65,14 +65,21 @@ export PKG_CONFIG_PATH=$(pwd)/libbpf/src:$PKG_CONFIG_PATH
 export LD_LIBRARY_PATH=$(pwd)/libbpf/src:$LD_LIBRARY_PATH
 ```
 
-### Adım 3: Derleme işlemi:
+> Bu ortam değişkenlerini kullanmadan önce, user-space programı olan `ips_user.c` dosyasının bulunduğu dizine geçmeniz gerekir. Örneğin:
+
+### Adım 3: `libbpf`'in kurulup kurulmadığını test edin:
+
+```bash
+pkg-config --modversion libbpf
+```
+
+> Bu komut, `libbpf` versiyonunu gösterir. Eğer bir çıktı alamıyorsanız, `PKG_CONFIG_PATH` doğru ayarlanmamış veya `libbpf.pc` dosyası bulunmamış olabilir.
+
+### Adım 4: Derleme işlemi:
 
 ```bash
 gcc -o ips_user ips_user.c -lbpf $(pkg-config --cflags --libs libbpf)
 ```
-
----
-
 ## 🚀 Kullanım
 
 IPS sistemini başlatmak için:
@@ -96,7 +103,7 @@ sudo ./ips_user eth0
 ### Yüklü XDP programını görme:
 
 ```bash
-sudo ip a | grep xdp
+sudo ip a | grep xdp <interface>
 ```
 
 > Çıktıda `xdp` ifadesi varsa, XDP programı arayüze bağlıdır.
