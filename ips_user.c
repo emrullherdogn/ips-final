@@ -36,17 +36,6 @@
 #define XDP_FLAGS_HW_MODE (1U << 3)
 #endif
 
-// Çekirdek versiyonuna göre uyumluluk fonksiyonları
-static int xdp_attach_fallback(int ifindex, int prog_fd, __u32 flags) {
-    // Eski libbpf versiyonları için fallback
-    #ifdef HAVE_BPF_SET_LINK_XDP_FD
-    return bpf_set_link_xdp_fd(ifindex, prog_fd, flags);
-    #else
-    // Manuel netlink implementasyonu gerekebilir
-    return -ENOTSUP;
-    #endif
-}
-
 static int increase_rlimit(int resource, rlim_t rlim) {
     struct rlimit r;
     int err;
@@ -71,7 +60,6 @@ int attach_xdp(const char *ifname) {
     err = increase_rlimit(RLIMIT_MEMLOCK, RLIM_INFINITY);
     if (err) {
         fprintf(stderr, "Uyarı: Memory limit artırılamadı: %s\n", strerror(errno));
-        // Devam et, bazı sistemlerde sorun olmayabilir
     }
 
     // Ağ arayüzü indeksini al
@@ -83,44 +71,33 @@ int attach_xdp(const char *ifname) {
 
     printf("Arayüz '%s' bulundu (index: %d)\n", ifname, ifindex);
 
-    // libbpf debug seviyesini ayarla
     libbpf_set_strict_mode(LIBBPF_STRICT_ALL);
 
     // eBPF programını yükle
     obj = bpf_object__open_file("ips_kern.o", NULL);
     if (libbpf_get_error(obj)) {
-        fprintf(stderr, "Hata: BPF programı 'ips_kern.o' açılamadı: %s\n", 
+        fprintf(stderr, "Hata: BPF programı 'ips_kern.o' açılamadı: %s\n",
                 strerror(-libbpf_get_error(obj)));
         return -1;
     }
 
-    // Program tipini ayarla (gerekirse)
     bpf_object__for_each_program(prog, obj) {
         bpf_program__set_type(prog, BPF_PROG_TYPE_XDP);
     }
 
-    // BPF programını yükle
     err = bpf_object__load(obj);
     if (err) {
         fprintf(stderr, "Hata: BPF programı yüklenemedi: %s\n", strerror(-err));
         goto cleanup;
     }
 
-    // XDP programını bul
     prog = bpf_object__find_program_by_name(obj, "ips_prog");
     if (!prog) {
         fprintf(stderr, "Hata: BPF programı 'ips_prog' bulunamadı.\n");
-        // Alternatif program isimlerini dene
-        prog = bpf_object__next_program(obj, NULL);
-        if (!prog) {
-            fprintf(stderr, "Hata: Hiçbir BPF programı bulunamadı.\n");
-            err = -1;
-            goto cleanup;
-        }
-        printf("Program bulundu: %s\n", bpf_program__name(prog));
+        err = -1;
+        goto cleanup;
     }
 
-    // Program dosya tanıtıcısını al
     prog_fd = bpf_program__fd(prog);
     if (prog_fd < 0) {
         fprintf(stderr, "Hata: BPF program dosya tanıtıcısı alınamadı.\n");
@@ -130,36 +107,18 @@ int attach_xdp(const char *ifname) {
 
     printf("BPF programı başarıyla yüklendi (fd: %d)\n", prog_fd);
 
-    // XDP programını arayüze bağla - yeni API önce dene
-    struct bpf_xdp_attach_opts opts = {
-        .sz = sizeof(opts),
-    };
-
-    err = bpf_xdp_attach(ifindex, prog_fd, xdp_flags, &opts);
+    // Sadece bpf_xdp_attach kullan
+    err = bpf_xdp_attach(ifindex, prog_fd, xdp_flags, NULL);
     if (err < 0) {
-        // Yeni API başarısız olursa eski API'yi dene
-        printf("Yeni API başarısız, eski API deneniyor...\n");
-        err = xdp_attach_fallback(ifindex, prog_fd, xdp_flags);
-        
-        if (err < 0) {
-            // SKB mode'u olmadan dene
-            printf("SKB mode olmadan deneniyor...\n");
-            xdp_flags = XDP_FLAGS_UPDATE_IF_NOEXIST;
-            err = bpf_xdp_attach(ifindex, prog_fd, xdp_flags, &opts);
-            
-            if (err < 0) {
-                fprintf(stderr,
-                    "Hata: XDP programı '%s' arayüzüne bağlanamadı: %s (ret: %d)\n",
-                    ifname, strerror(-err), err);
-                goto cleanup;
-            }
-        }
+        fprintf(stderr,
+                "Hata: XDP programı '%s' arayüzüne bağlanamadı: %s (ret: %d)\n",
+                ifname, strerror(-err), err);
+        goto cleanup;
     }
 
     printf("XDP programı '%s' arayüzüne başarıyla bağlandı.\n", ifname);
     printf("Program çalışıyor. Durdurmak için Ctrl+C basın.\n");
-    
-    // Program çalışırken bekle
+
     while (1) {
         sleep(1);
     }
@@ -188,7 +147,6 @@ int main(int argc, char **argv) {
     printf("Linux Çekirdeği IPS - XDP Programı\n");
     printf("Arayüz: %s\n", ifname);
 
-    // Root yetkisi kontrolü
     if (geteuid() != 0) {
         fprintf(stderr, "Hata: Bu program root yetkisi ile çalıştırılmalıdır.\n");
         return 1;
