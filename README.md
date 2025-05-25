@@ -11,7 +11,6 @@ Projenin derlenip çalıştırılabilmesi için aşağıdaki paketlerin sistemin
 ```bash
 sudo apt update -y
 sudo apt install clang llvm -y          
-sudo apt install libbpf-dev -y
 sudo apt install gcc -y
 sudo apt install bpftool -y
 sudo apt install linux-headers-$(uname -r) -y
@@ -22,7 +21,7 @@ sudo apt install gcc-multilib -y
 |------------------|----------|
 | `clang`          | eBPF programlarını BPF bytecode'a çeviren C derleyicisidir. |
 | `llvm`           | Clang ile birlikte çalışan derleyici altyapısıdır. |
-| `libbpf-dev`     | eBPF programlarının kullanıcı alanı üzerinden yönetilmesini sağlayan kütüphanedir. |
+| `libbpf`         | eBPF programlarının kullanıcı alanı üzerinden yönetilmesini sağlayan kütüphanedir. |
 | `gcc`            | Kullanıcı alanı (user-space) uygulamalarını derlemek için kullanılır. |
 | `bpftool`        | XDP/BPF programlarını görüntülemek, yüklemek ve kaldırmak için kullanılır. |
 | `linux-headers`  | Kernel API'sine erişim sağlar, XDP programlarının çekirdeğe yüklenebilmesi için gereklidir. |
