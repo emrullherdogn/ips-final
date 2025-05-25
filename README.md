@@ -40,10 +40,22 @@ clang -O2 -target bpf -g -D__BPF_NO_BTF__ -c ips_kern.c -o ips_kern.o
 
 ## 🖥️ User-space Uygulamasının Derlenmesi
 
+Eğer sisteminizde libbpf sistem genelinde kurulu değilse ve proje dizininde özel olarak derlenmişse:
+
+### Adım 1: `libbpf.pc` dosyasının yolu `PKG_CONFIG_PATH`'e eklenir:
 ```bash
-gcc -o ips_user ips_user.c -lbpf
+export PKG_CONFIG_PATH=$(pwd)/libbpf/src:$PKG_CONFIG_PATH
 ```
 
+### Adım 2: `libbpf.so` dosyası için `LD_LIBRARY_PATH` ayarlanır:
+```bash
+export LD_LIBRARY_PATH=$(pwd)/libbpf/src:$LD_LIBRARY_PATH
+```
+
+### Adım 3: Derleme işlemi:
+```bash
+gcc -o ips_user ips_user.c -lpbf
+```
 ---
 
 ## 🚀 Kullanım
@@ -85,5 +97,3 @@ sudo ip link set dev <interface> xdp off
 ```bash
 sudo ip link set dev eth0 xdp off
 ```
-
----
