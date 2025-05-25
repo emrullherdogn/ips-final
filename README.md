@@ -8,7 +8,8 @@ Bu proje, **XDP (eXpress Data Path)** teknolojisini kullanarak ağ trafiğini ge
 
 Projenin derlenip çalıştırılabilmesi için aşağıdaki paketlerin sisteminizde kurulu olması gerekir:
 
-### 🔧 Gerekli Paketlerin Kurulumu
+### 🔧 Gerekli Paketlerin Kurulumu (Tek Satırda)
+
 ```bash
 sudo apt update -y && sudo apt install -y clang llvm gcc gcc-multilib bpftool linux-headers-$(uname -r) pkg-config make git libelf-dev
 ```
@@ -32,8 +33,8 @@ sudo apt update -y && sudo apt install -y clang llvm gcc gcc-multilib bpftool li
 ```bash
 git clone --branch v0.8.0 https://github.com/libbpf/libbpf.git
 cd libbpf/src
-sudo make
-sudo make install
+make
+cd ../..
 ```
 
 > Bu işlem `libbpf.a` ve `libbpf.so` kütüphanelerini oluşturacaktır.
@@ -95,7 +96,7 @@ sudo ./ips_user eth0
 ### Yüklü XDP programını görme:
 
 ```bash
-sudo ip a | grep xdp <interface>
+sudo ip link show dev <interface>
 ```
 
 > Çıktıda `xdp` ifadesi varsa, XDP programı arayüze bağlıdır.
