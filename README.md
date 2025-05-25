@@ -96,7 +96,7 @@ sudo ./ips_user eth0
 ### Yüklü XDP programını görme:
 
 ```bash
-sudo ip link show dev <interface>
+sudo ip a | grep xdp <interface>
 ```
 
 > Çıktıda `xdp` ifadesi varsa, XDP programı arayüze bağlıdır.
