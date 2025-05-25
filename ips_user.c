@@ -50,7 +50,11 @@ int attach_xdp(const char *ifname) {
     }
 
     // XDP programını ağ arayüzüne bağla
+#ifdef HAVE_BPF_XDP_ATTACH
     int err = bpf_xdp_attach(ifindex, prog_fd, xdp_flags, NULL);
+#else
+    int err = bpf_set_link_xdp_fd(ifindex, prog_fd, xdp_flags);
+#endif
     if (err < 0) {
         fprintf(stderr,
             "Hata: XDP programı '%s' arayüzüne bağlanamadı: %s (errno: %d, ret: %d)\n",
