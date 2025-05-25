@@ -53,7 +53,7 @@ export LD_LIBRARY_PATH=$(pwd)/libbpf/src:$LD_LIBRARY_PATH
 
 ### Adım 3: Derleme işlemi:
 ```bash
-gcc -o ips_user ips_user.c -lpbf
+gcc -o ips_user ips_user.c -lbpf
 ```
 ---
 
