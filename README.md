@@ -1,4 +1,4 @@
-# 🛡️ XDP Tabanlı IPS Projesi
+# 🛡️ XDP Generic Tabanlı IPS Projesi
 
 Bu proje, **XDP (eXpress Data Path)** teknolojisini kullanarak ağ trafiğini gerçek zamanlı analiz eden ve şüpheli paketleri belirlenen kurallara göre engelleyen bir **IPS (Intrusion Prevention System)** çözümüdür.
 
