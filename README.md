@@ -32,7 +32,8 @@ sudo apt update -y && sudo apt install -y clang llvm gcc gcc-multilib bpftool li
 ```bash
 git clone --branch v0.8.0 https://github.com/libbpf/libbpf.git
 cd libbpf/src
-make
+sudo make
+sudo make install
 ```
 
 > Bu işlem `libbpf.a` ve `libbpf.so` kütüphanelerini oluşturacaktır.
