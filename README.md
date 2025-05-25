@@ -8,7 +8,7 @@ Bu proje, **XDP (eXpress Data Path)** teknolojisini kullanarak ağ trafiğini ge
 
 Projenin derlenip çalıştırılabilmesi için aşağıdaki paketlerin sisteminizde kurulu olması gerekir:
 
-### 🔧 Gerekli Paketlerin Kurulumu (Tek Satırda)
+### 🔧 Gerekli Paketlerin Kurulumu
 
 ```bash
 sudo apt update -y && sudo apt install -y clang llvm gcc gcc-multilib bpftool linux-headers-$(uname -r) pkg-config make git libelf-dev
