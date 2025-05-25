@@ -34,7 +34,6 @@ sudo apt update -y && sudo apt install -y clang llvm gcc gcc-multilib bpftool li
 git clone --branch v0.8.0 https://github.com/libbpf/libbpf.git
 cd libbpf/src
 make
-cd ../..
 ```
 
 > Bu işlem `libbpf.a` ve `libbpf.so` kütüphanelerini oluşturacaktır.
@@ -65,7 +64,7 @@ export PKG_CONFIG_PATH=$(pwd)/libbpf/src:$PKG_CONFIG_PATH
 export LD_LIBRARY_PATH=$(pwd)/libbpf/src:$LD_LIBRARY_PATH
 ```
 
-> Bu ortam değişkenlerini kullanmadan önce, user-space programı olan `ips_user.c` dosyasının bulunduğu dizine geçmeniz gerekir. Örneğin:
+> Bu ortam değişkenlerini kullanmadan önce, user-space programı olan `ips_user.c` dosyasının bulunduğu dizine geçmeniz gerekir.
 
 ### Adım 3: `libbpf`'in kurulup kurulmadığını test edin:
 
