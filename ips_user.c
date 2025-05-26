@@ -3,50 +3,49 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/resource.h>
 #include <net/if.h>
-
-// BPF header'ları
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
-
-// Eski sistemlerde linux/if_link.h gerekebilir
-#ifndef __has_include
-#define __has_include(x) 0
-#endif
-
-#if __has_include(<linux/if_link.h>)
 #include <linux/if_link.h>
-#endif
+#include <bpf/bpf_core_read.h>
 
-// XDP flags - eski çekirdeklerde olmayabilir
-#ifndef XDP_FLAGS_UPDATE_IF_NOEXIST
-#define XDP_FLAGS_UPDATE_IF_NOEXIST (1U << 0)
-#endif
+static int ifindex_global = -1;
+static __u32 xdp_flags_global = 0;
 
-#ifndef XDP_FLAGS_SKB_MODE
-#define XDP_FLAGS_SKB_MODE (1U << 1)
-#endif
+struct event_t {
+    char rule_name[32];
+};
 
-#ifndef XDP_FLAGS_DRV_MODE
-#define XDP_FLAGS_DRV_MODE (1U << 2)
-#endif
-
-#ifndef XDP_FLAGS_HW_MODE
-#define XDP_FLAGS_HW_MODE (1U << 3)
-#endif
+void handle_sigint(int sig) {
+    printf("\nCtrl+C algılandı, XDP programı kaldırılıyor...\n");
+    if (ifindex_global > 0) {
+        int err = bpf_set_link_xdp_fd(ifindex_global, -1, xdp_flags_global);
+        if (err < 0) {
+            fprintf(stderr, "Uyarı: XDP programı kaldırılamadı: %s\n", strerror(-err));
+        } else {
+            printf("XDP programı başarıyla kaldırıldı.\n");
+        }
+    }
+    exit(0);
+}
 
 static int increase_rlimit(int resource, rlim_t rlim) {
     struct rlimit r;
     int err;
 
     err = getrlimit(resource, &r);
-    if (err) {
-        return err;
-    }
+    if (err) return err;
 
     r.rlim_cur = r.rlim_max = rlim;
     return setrlimit(resource, &r);
+}
+
+int handle_event(void *ctx, void *data, size_t data_sz) {
+    struct event_t *e = data;
+    printf("IPS: Sahte Paket Algılandı! (%s Paketi)\n", e->rule_name);
+    return 0;
 }
 
 int attach_xdp(const char *ifname) {
@@ -56,24 +55,25 @@ int attach_xdp(const char *ifname) {
     int err = 0;
     __u32 xdp_flags = XDP_FLAGS_UPDATE_IF_NOEXIST | XDP_FLAGS_SKB_MODE;
 
-    // Memory limit'i artır (BPF programları için gerekli)
     err = increase_rlimit(RLIMIT_MEMLOCK, RLIM_INFINITY);
     if (err) {
         fprintf(stderr, "Uyarı: Memory limit artırılamadı: %s\n", strerror(errno));
     }
 
-    // Ağ arayüzü indeksini al
     ifindex = if_nametoindex(ifname);
     if (!ifindex) {
         fprintf(stderr, "Hata: '%s' arayüzü bulunamadı: %s\n", ifname, strerror(errno));
         return -1;
     }
 
-    printf("Arayüz '%s' bulundu (index: %d)\n", ifname, ifindex);
+    ifindex_global = ifindex;
+    xdp_flags_global = xdp_flags;
 
+    signal(SIGINT, handle_sigint);
+
+    printf("Arayüz '%s' bulundu (index: %d)\n", ifname, ifindex);
     libbpf_set_strict_mode(LIBBPF_STRICT_ALL);
 
-    // eBPF programını yükle
     obj = bpf_object__open_file("ips_kern.o", NULL);
     if (libbpf_get_error(obj)) {
         fprintf(stderr, "Hata: BPF programı 'ips_kern.o' açılamadı: %s\n",
@@ -107,8 +107,7 @@ int attach_xdp(const char *ifname) {
 
     printf("BPF programı başarıyla yüklendi (fd: %d)\n", prog_fd);
 
-    // Sadece bpf_xdp_attach kullan
-    err = bpf_xdp_attach(ifindex, prog_fd, xdp_flags, NULL);
+    err = bpf_set_link_xdp_fd(ifindex, prog_fd, xdp_flags);
     if (err < 0) {
         fprintf(stderr,
                 "Hata: XDP programı '%s' arayüzüne bağlanamadı: %s (ret: %d)\n",
@@ -119,8 +118,21 @@ int attach_xdp(const char *ifname) {
     printf("XDP programı '%s' arayüzüne başarıyla bağlandı.\n", ifname);
     printf("Program çalışıyor. Durdurmak için Ctrl+C basın.\n");
 
+    // Ring buffer setup
+    int ringbuf_map_fd = bpf_object__find_map_fd_by_name(obj, "events");
+    if (ringbuf_map_fd < 0) {
+        fprintf(stderr, "Ring buffer map bulunamadı.\n");
+        goto cleanup;
+    }
+
+    struct ring_buffer *rb = ring_buffer__new(ringbuf_map_fd, handle_event, NULL, NULL);
+    if (!rb) {
+        fprintf(stderr, "Ring buffer oluşturulamadı.\n");
+        goto cleanup;
+    }
+
     while (1) {
-        sleep(1);
+        ring_buffer__poll(rb, 100); // 100 ms
     }
 
 cleanup:
