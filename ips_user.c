@@ -91,9 +91,9 @@ int attach_xdp(const char *ifname) {
         goto cleanup;
     }
 
-    prog = bpf_object__find_program_by_name(obj, "ips_prog");
+    prog = bpf_object__find_program_by_name(obj, "ips_kern");
     if (!prog) {
-        fprintf(stderr, "Hata: BPF programı 'ips_prog' bulunamadı.\n");
+        fprintf(stderr, "Hata: BPF programı 'ips_kern' bulunamadı.\n");
         err = -1;
         goto cleanup;
     }
